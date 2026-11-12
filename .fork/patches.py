@@ -24,11 +24,11 @@ PATCHES: list[tuple[str, list[tuple[str, str, str]]]] = [
                 "requests-in-flight",
                 "/// Requests in flight per import, across all its steps.\nconst CONCURRENCY: usize = 16;",
                 "/// Requests in flight per import, across all its steps.\nconst CONCURRENCY: usize = 16;\n"
-                "/// [`CONCURRENCY`], overridable per host with `INFINIDYSK__QUEUE__IMPORT_CONCURRENCY`\n"
-                "/// (1-256), so import throughput can be tuned against the provider connections\n"
-                "/// already paid for.\n"
+                "/// [`CONCURRENCY`], overridable per host with `INFD_IMPORT_CONCURRENCY` (1-256), so import\n"
+                "/// throughput can be tuned against the provider connections already paid for. Named\n"
+                "/// outside the `INFINIDYSK__*` namespace, which the settings loader rejects.\n"
                 "static IMPORT_CONCURRENCY: LazyLock<usize> = LazyLock::new(|| {\n"
-                '    std::env::var("INFINIDYSK__QUEUE__IMPORT_CONCURRENCY")\n'
+                '    std::env::var("INFD_IMPORT_CONCURRENCY")\n'
                 "        .ok()\n"
                 "        .and_then(|v| v.trim().parse::<usize>().ok())\n"
                 "        .map_or(CONCURRENCY, |n| n.clamp(1, 256))\n"
