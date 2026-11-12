@@ -34,6 +34,8 @@ jobs:
           repository: infinidysk/infinidysk
           ref: main
           path: src
+          # crates/yenc/rapidyenc is a submodule; the build needs its CMakeLists.txt.
+          submodules: recursive
 
       - name: Apply fork patches
         run: python3 fork/.fork/patches.py src
