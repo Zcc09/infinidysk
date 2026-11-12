@@ -8,7 +8,7 @@ merge conflict.
 ## What the patches do
 
 1. **Import concurrency is tunable** (`crates/queue/src/import.rs`). The compiled default stays at
-   16 requests in flight per import; `INFINIDYSK__QUEUE__IMPORT_CONCURRENCY` overrides it per host
+   16 requests in flight per import; `INFD_IMPORT_CONCURRENCY` overrides it per host
    (clamped 1-256) and the `join_all` window scales with it.
 2. **Article checking can be turned off** (`crates/queue/src/import.rs`, `crates/infinidysk/src/config.rs`).
    `health.check_percent` accepts `0`, which skips `check_articles()` entirely instead of failing
