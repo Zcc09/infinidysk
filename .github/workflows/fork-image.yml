@@ -1,0 +1,82 @@
+name: fork image
+
+# Builds the fork image from *upstream's current main*, with .fork/patches.py applied on top.
+# The fork's own source files stay byte-identical to upstream, so tracking it needs no merges.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".fork/**"
+      - ".github/workflows/fork-image.yml"
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: fork-image
+  cancel-in-progress: true
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out the fork (patches only)
+        uses: actions/checkout@v4
+        with:
+          path: fork
+
+      - name: Check out upstream main
+        uses: actions/checkout@v4
+        with:
+          repository: infinidysk/infinidysk
+          ref: main
+          path: src
+
+      - name: Apply fork patches
+        run: python3 fork/.fork/patches.py src
+
+      - id: meta
+        run: |
+          echo "upstream=$(git -C src rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "short=$(git -C src rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Skip when this upstream commit is already built
+        id: check
+        run: |
+          if docker manifest inspect "ghcr.io/zcc09/infinidysk-next:fork-${{ steps.meta.outputs.short }}" >/dev/null 2>&1; then
+            echo "built=true" >> "$GITHUB_OUTPUT"
+            echo "upstream ${{ steps.meta.outputs.short }} already built"
+          else
+            echo "built=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/build-push-action@v6
+        if: steps.check.outputs.built == 'false'
+        with:
+          context: src
+          push: true
+          build-args: |
+            COMMIT=${{ steps.meta.outputs.upstream }}
+            VERSION=fork-${{ steps.meta.outputs.short }}
+          tags: |
+            ghcr.io/zcc09/infinidysk-next:fork
+            ghcr.io/zcc09/infinidysk-next:fork-${{ steps.meta.outputs.short }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          echo "### fork image" >> "$GITHUB_STEP_SUMMARY"
+          echo "- upstream commit: ${{ steps.meta.outputs.upstream }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- tag: ghcr.io/zcc09/infinidysk-next:fork-${{ steps.meta.outputs.short }}" >> "$GITHUB_STEP_SUMMARY"
